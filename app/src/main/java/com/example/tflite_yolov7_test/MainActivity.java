@@ -346,6 +346,8 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         Intent intent = new Intent(MainActivity.this, DetectorActivity.class);
+        intent.putExtra("RunMode", getRunModeFromGUI());
+        intent.putExtra("InputSize", getInputSizeFromGUI());
         startActivity(intent);
     }
     @Override

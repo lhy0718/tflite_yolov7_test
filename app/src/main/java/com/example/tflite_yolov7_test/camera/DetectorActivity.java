@@ -1,5 +1,6 @@
 package com.example.tflite_yolov7_test.camera;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -10,8 +11,11 @@ import android.graphics.Typeface;
 import android.media.ImageReader;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.util.Log;
 import android.util.Size;
 import android.util.TypedValue;
+import android.view.View;
+import android.widget.RadioButton;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -24,22 +28,25 @@ import com.example.tflite_yolov7_test.customview.OverlayView;
 import com.example.tflite_yolov7_test.TfliteRunner;
 import com.example.tflite_yolov7_test.TfliteRunMode;
 
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class DetectorActivity extends CameraActivity implements ImageReader.OnImageAvailableListener {
 
 
-    private static final int TF_OD_API_INPUT_SIZE = 320;
     private static final boolean TF_OD_API_IS_QUANTIZED = true;
     private static final String TF_OD_API_MODEL_FILE = "detect.tflite";
     private static final String TF_OD_API_LABELS_FILE = "labelmap.txt";
-    private static final TfliteRunMode.Mode MODE = TfliteRunMode.Mode.NONE_INT8;
     // Minimum detection confidence to track a detection.
     private static final float MINIMUM_CONFIDENCE_TF_OD_API = 0.5f;
     private static final boolean MAINTAIN_ASPECT = false;
     private static final Size DESIRED_PREVIEW_SIZE = new Size(640, 480);
     private static final boolean SAVE_PREVIEW_BITMAP = false;
     private static final float TEXT_SIZE_DIP = 10;
+    private int inputSize;
+    private TfliteRunMode.Mode runMode;
     OverlayView trackingOverlay;
     private Integer sensorOrientation;
 
@@ -124,6 +131,13 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     }
     @Override
     public void onPreviewSizeChosen(final Size size, final int rotation) {
+        Bundle extras = getIntent().getExtras();
+        if (extras != null) {
+            runMode = (TfliteRunMode.Mode) extras.get("RunMode");
+            inputSize = extras.getInt("InputSize");
+        }
+        ((TextView) findViewById(R.id.textView)).setText("RunMode: " + runMode + ", InputSize: " + inputSize);
+
         final float textSizePx =
                 TypedValue.applyDimension(
                         TypedValue.COMPLEX_UNIT_DIP, TEXT_SIZE_DIP, getResources().getDisplayMetrics());
@@ -132,11 +146,10 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
 
         tracker = new MultiBoxTracker(this);
 
-        int cropSize = TF_OD_API_INPUT_SIZE;
+        int cropSize = inputSize;
 
         try {
-            detector = new TfliteRunner(this, MODE, TF_OD_API_INPUT_SIZE, 0.25f, 0.45f);
-            cropSize = TF_OD_API_INPUT_SIZE;
+            detector = new TfliteRunner(this, runMode, inputSize, 0.25f, 0.45f);
         } catch (final Exception e) {
             e.printStackTrace();
             Toast toast =
@@ -171,7 +184,7 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                     }
                 });
 
-        tracker.setFrameConfiguration(getDesiredPreviewFrameSize(), TF_OD_API_INPUT_SIZE, sensorOrientation);
+        tracker.setFrameConfiguration(getDesiredPreviewFrameSize(), inputSize, sensorOrientation);
     }
 
     @Override

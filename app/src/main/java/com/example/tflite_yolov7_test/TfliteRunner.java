@@ -82,12 +82,12 @@ public class TfliteRunner {
                 options.setAllowFp16PrecisionForFp32(true);
                 break;
             case NNAPI_GPU_FP32:
-                nnapi_options.setAcceleratorName("qti-gpu");
+                nnapi_options.setAcceleratorName("nnapi-reference");
                 nnapi_options.setAllowFp16(false);
                 options.addDelegate(new NnApiDelegate(nnapi_options));
                 break;
             case NNAPI_GPU_FP16:
-                nnapi_options.setAcceleratorName("qti-gpu");
+                nnapi_options.setAcceleratorName("nnapi-reference");
                 nnapi_options.setAllowFp16(true);
                 options.addDelegate(new NnApiDelegate(nnapi_options));
                 break;
@@ -95,7 +95,7 @@ public class TfliteRunner {
                 options.setUseXNNPACK(true);
                 break;
             case NNAPI_DSP_INT8:
-                nnapi_options.setAcceleratorName("qti-dsp");
+                nnapi_options.setAcceleratorName("nnapi-reference");
                 options.addDelegate(new NnApiDelegate(nnapi_options));
                 break;
             default:
