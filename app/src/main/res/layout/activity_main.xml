@@ -36,6 +36,29 @@
                     android:layout_weight="1"
                     android:orientation="horizontal">
 
+                    <TextView
+                        android:id="@+id/modelSelectTextView"
+                        android:layout_width="59dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Selected Model" />
+
+                    <Spinner
+                        android:id="@+id/base_model"
+                        android:layout_width="46dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:entries="@array/models_spinner_titles"
+                        android:spinnerMode="dropdown" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:orientation="horizontal">
+
                     <RadioGroup
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"

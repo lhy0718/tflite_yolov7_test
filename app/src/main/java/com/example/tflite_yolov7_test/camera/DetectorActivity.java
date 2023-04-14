@@ -45,6 +45,7 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     private static final Size DESIRED_PREVIEW_SIZE = new Size(640, 480);
     private static final boolean SAVE_PREVIEW_BITMAP = false;
     private static final float TEXT_SIZE_DIP = 10;
+    private String baseModelName;
     private int inputSize;
     private TfliteRunMode.Mode runMode;
     OverlayView trackingOverlay;
@@ -133,10 +134,11 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     public void onPreviewSizeChosen(final Size size, final int rotation) {
         Bundle extras = getIntent().getExtras();
         if (extras != null) {
+            baseModelName = extras.getString("BaseModelName");
             runMode = (TfliteRunMode.Mode) extras.get("RunMode");
             inputSize = extras.getInt("InputSize");
         }
-        ((TextView) findViewById(R.id.textView)).setText("RunMode: " + runMode + ", InputSize: " + inputSize);
+        ((TextView) findViewById(R.id.textView)).setText("BaseModel: " + baseModelName + ", RunMode: " + runMode + ", InputSize: " + inputSize);
 
         final float textSizePx =
                 TypedValue.applyDimension(
@@ -149,7 +151,7 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
         int cropSize = inputSize;
 
         try {
-            detector = new TfliteRunner(this, runMode, inputSize, 0.25f, 0.45f);
+            detector = new TfliteRunner(this, baseModelName, runMode, inputSize, 0.25f, 0.45f);
         } catch (final Exception e) {
             e.printStackTrace();
             Toast toast =

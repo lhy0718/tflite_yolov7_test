@@ -23,6 +23,7 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.SeekBar;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -47,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     final int REQUEST_OPEN_DIRECTORY = 9999;
     //permission
     private int inputSize = -1;
+    private String baseModelName = "yolov7-tiny"; // must be lowercase
     private File[] process_files = null;
     private final int REQUEST_PERMISSION = 1000;
     private final String[] PERMISSIONS = {
@@ -192,10 +194,12 @@ public class MainActivity extends AppCompatActivity {
     }
     public float getConfThreshFromGUI(){ return ((float)((SeekBar)findViewById(R.id.conf_seekBar)).getProgress()) / 100.0f;}
     public float getIoUThreshFromGUI(){ return ((float)((SeekBar)findViewById(R.id.iou_seekBar)).getProgress()) / 100.0f;}
+    public String getBaseModelNameFromGUI(){ return ((String)((Spinner)findViewById(R.id.base_model)).getSelectedItem()).toLowerCase();}
     public void OnRunInferenceButtonClick(View view){
         TfliteRunner runner;
         TfliteRunMode.Mode runmode = getRunModeFromGUI();
         this.inputSize = getInputSizeFromGUI();
+        this.baseModelName = getBaseModelNameFromGUI();
         //validation
         if (this.process_files == null || this.process_files.length == 0){
             showErrorDialog("Please select image or directory.");
@@ -209,7 +213,7 @@ public class MainActivity extends AppCompatActivity {
         //open model
         try {
             Context context = getApplicationContext();
-            runner = new TfliteRunner(context, runmode, this.inputSize, getConfThreshFromGUI(), getIoUThreshFromGUI());
+            runner = new TfliteRunner(context, this.baseModelName, runmode, this.inputSize, getConfThreshFromGUI(), getIoUThreshFromGUI());
         } catch (Exception e) {
             showErrorDialog("Model load failed: " + e.getMessage());
             return;
@@ -346,6 +350,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         Intent intent = new Intent(MainActivity.this, DetectorActivity.class);
+        intent.putExtra("BaseModelName", getBaseModelNameFromGUI());
         intent.putExtra("RunMode", getRunModeFromGUI());
         intent.putExtra("InputSize", getInputSizeFromGUI());
         startActivity(intent);
