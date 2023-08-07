@@ -75,9 +75,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     private boolean isGranted(){
-        for (int i = 0; i < PERMISSIONS.length; i++){
-            if (checkSelfPermission(PERMISSIONS[i]) != PackageManager.PERMISSION_GRANTED) {
-                if (shouldShowRequestPermissionRationale(PERMISSIONS[i])) {
+        for (String permission : PERMISSIONS) {
+            if (checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+                if (shouldShowRequestPermissionRationale(permission)) {
                     Toast.makeText(this, "permission is required", Toast.LENGTH_LONG).show();
                 }
                 return false;
@@ -408,15 +408,19 @@ public class MainActivity extends AppCompatActivity {
         boolean precision_fp16 = ((RadioButton)findViewById(R.id.radioButton_runFP16)).isChecked();
         boolean precision_int8 = ((RadioButton)findViewById(R.id.radioButton_runInt8)).isChecked();
         boolean delegate_none = ((RadioButton)findViewById(R.id.radioButton_delegateNone)).isChecked();
+        boolean delegate_gpu = ((RadioButton)findViewById(R.id.radioButton_delegateGPU)).isChecked();
         boolean delegate_nnapi = ((RadioButton)findViewById(R.id.radioButton_delegateNNAPI)).isChecked();
-        boolean[] gui_selected = {model_float, model_int8, precision_fp32, precision_fp16, precision_int8, delegate_none, delegate_nnapi};
+        boolean[] gui_selected = {model_float, model_int8, precision_fp32, precision_fp16, precision_int8, delegate_none, delegate_gpu, delegate_nnapi};
         final Map<TfliteRunMode.Mode, boolean[]> candidates = new HashMap<TfliteRunMode.Mode, boolean[]>(){{
-            put(TfliteRunMode.Mode.NONE_FP32,      new boolean[]{true, false, true, false, false, true, false});
-            put(TfliteRunMode.Mode.NONE_FP16,      new boolean[]{true, false, false, true, false, true, false});
-            put(TfliteRunMode.Mode.NNAPI_GPU_FP32, new boolean[]{true, false, true, false, false, false, true});
-            put(TfliteRunMode.Mode.NNAPI_GPU_FP16, new boolean[]{true, false, false, true, false, false, true});
-            put(TfliteRunMode.Mode.NONE_INT8,      new boolean[]{false, true, false, false, true, true, false});
-            put(TfliteRunMode.Mode.NNAPI_DSP_INT8, new boolean[]{false, true, false, false, true, false, true});
+            put(TfliteRunMode.Mode.NONE_FP32,      new boolean[]{true, false, true, false, false, true, false, false});
+            put(TfliteRunMode.Mode.NONE_FP16,      new boolean[]{true, false, false, true, false, true, false, false});
+            put(TfliteRunMode.Mode.GPU_FP32,      new boolean[]{true, false, true, false, false, false, true, false});
+            put(TfliteRunMode.Mode.GPU_FP16,      new boolean[]{true, false, false, true, false, false, true, false});
+            put(TfliteRunMode.Mode.NNAPI_GPU_FP32, new boolean[]{true, false, true, false, false, false, false, true});
+            put(TfliteRunMode.Mode.NNAPI_GPU_FP16, new boolean[]{true, false, false, true, false, false, false, true});
+            put(TfliteRunMode.Mode.NONE_INT8,      new boolean[]{false, true, false, false, true, true, false, false});
+            put(TfliteRunMode.Mode.GPU_INT8,      new boolean[]{false, true, false, false, true, false, true, false});
+            put(TfliteRunMode.Mode.NNAPI_DSP_INT8, new boolean[]{false, true, false, false, true, false, false, true});
         }};
         for(Map.Entry<TfliteRunMode.Mode, boolean[]> entry : candidates.entrySet()){
             if (Arrays.equals(gui_selected, entry.getValue())) return entry.getKey();

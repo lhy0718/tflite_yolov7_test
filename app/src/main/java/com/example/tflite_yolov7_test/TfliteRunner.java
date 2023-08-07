@@ -5,14 +5,20 @@ import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.RectF;
+import android.os.Build;
 import android.util.Log;
 
 import org.tensorflow.lite.Interpreter;
 
+//import org.tensorflow.lite.gpu.CompatibilityList;
+//import org.tensorflow.lite.gpu.GpuDelegate;
+//import org.tensorflow.lite.gpu.GpuDelegateFactory;
 import org.tensorflow.lite.nnapi.NnApiDelegate;
 
+import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
@@ -69,38 +75,43 @@ public class TfliteRunner {
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
     }
     public void loadModel(Context context, String baseModelName, Mode runmode, int inputSize, int num_threads) throws Exception{
-        Interpreter.Options options = new Interpreter.Options();
-        NnApiDelegate.Options nnapi_options = new NnApiDelegate.Options();
+        Interpreter.Options options = (new Interpreter.Options());
+        NnApiDelegate nnApiDelegate = new NnApiDelegate();
+        options.addDelegate(nnApiDelegate);
         options.setNumThreads(num_threads);
+        NnApiDelegate.Options nnapi_options = new NnApiDelegate.Options();
         nnapi_options.setExecutionPreference(1);//sustain-spped
         switch (runmode){
             case NONE_FP32:
+            case NONE_INT8:
                 options.setUseXNNPACK(true);
                 break;
             case NONE_FP16:
-                //TODO:deprecated?
                 options.setAllowFp16PrecisionForFp32(true);
                 break;
+            case GPU_FP32:
+            case GPU_FP16:
+            case GPU_INT8:
+//                CompatibilityList compatList = new CompatibilityList();
+//                GpuDelegate.Options delegateOptions = compatList.getBestOptionsForThisDevice();
+//                GpuDelegate gpuDelegate = new GpuDelegate(delegateOptions);
+//                options.addDelegate(gpuDelegate);
+                break;
             case NNAPI_GPU_FP32:
-                nnapi_options.setAcceleratorName("nnapi-reference");
                 nnapi_options.setAllowFp16(false);
                 options.addDelegate(new NnApiDelegate(nnapi_options));
                 break;
             case NNAPI_GPU_FP16:
-                nnapi_options.setAcceleratorName("nnapi-reference");
                 nnapi_options.setAllowFp16(true);
                 options.addDelegate(new NnApiDelegate(nnapi_options));
                 break;
-            case NONE_INT8:
-                options.setUseXNNPACK(true);
-                break;
             case NNAPI_DSP_INT8:
-                nnapi_options.setAcceleratorName("nnapi-reference");
                 options.addDelegate(new NnApiDelegate(nnapi_options));
                 break;
             default:
                 throw new RuntimeException("Unknown runmode!");
         }
+
         boolean quantized_mode = TfliteRunMode.isQuantizedMode(runmode);
         String precision_str = quantized_mode ? "int8" : "fp32";
 //        String modelname = "yolov5s_" + precision_str + "_" + String.valueOf(inputSize) + ".tflite";

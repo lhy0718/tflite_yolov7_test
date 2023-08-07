@@ -15,6 +15,8 @@ import android.util.Log;
 import android.util.Size;
 import android.util.TypedValue;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -186,7 +188,6 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                     }
                 });
 
-        tracker.setFrameConfiguration(getDesiredPreviewFrameSize(), inputSize, sensorOrientation);
     }
 
     @Override
@@ -250,6 +251,17 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                                 });
                     }
                 });
+
+        tracker.setFrameConfiguration(getDesiredPreviewFrameSize(), inputSize, sensorOrientation);
+        findViewById(R.id.container).setLayoutParams(
+                new LinearLayout.LayoutParams(
+                        findViewById(R.id.texture).getLayoutParams().width,
+                        findViewById(R.id.texture).getLayoutParams().height
+                )
+        );
+        findViewById(R.id.tracking_overlay).setLayoutParams(
+                findViewById(R.id.texture).getLayoutParams()
+        );
     }
 
 }
