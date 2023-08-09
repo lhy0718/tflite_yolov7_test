@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    compileSdk 34
+    compileSdk 31
 
     defaultConfig {
         ndk {
@@ -11,7 +11,7 @@ android {
         }
         applicationId "com.example.tflite_yolov7_test"
         minSdkVersion 29
-        targetSdk 34
+        targetSdk 31
         versionCode 1
         versionName "1.0"
 
@@ -68,7 +68,7 @@ dependencies {
 //    implementation 'org.tensorflow:tensorflow-lite-gpu-api:2.10.0'
 //    implementation 'org.tensorflow:tensorflow-lite-support:0.0.0-nightly-SNAPSHOT'
 
-    testImplementation 'junit:junit:4.+'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+    testImplementation 'junit:junit:'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
