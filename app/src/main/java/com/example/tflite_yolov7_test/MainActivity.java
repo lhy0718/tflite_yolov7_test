@@ -18,6 +18,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.provider.DocumentsContract;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -89,6 +90,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.activity_main);
         SeekBar conf_seekBar = (SeekBar)findViewById(R.id.conf_seekBar);
@@ -409,8 +411,9 @@ public class MainActivity extends AppCompatActivity {
         boolean precision_int8 = ((RadioButton)findViewById(R.id.radioButton_runInt8)).isChecked();
         boolean delegate_none = ((RadioButton)findViewById(R.id.radioButton_delegateNone)).isChecked();
         boolean delegate_gpu = ((RadioButton)findViewById(R.id.radioButton_delegateGPU)).isChecked();
-        boolean delegate_nnapi = ((RadioButton)findViewById(R.id.radioButton_delegateNNAPI)).isChecked();
-        boolean[] gui_selected = {model_float, model_int8, precision_fp32, precision_fp16, precision_int8, delegate_none, delegate_gpu, delegate_nnapi};
+//        boolean delegate_nnapi = ((RadioButton)findViewById(R.id.radioButton_delegateNNAPI)).isChecked();
+//        boolean[] gui_selected = {model_float, model_int8, precision_fp32, precision_fp16, precision_int8, delegate_none, delegate_gpu, delegate_nnapi};
+        boolean[] gui_selected = {model_float, model_int8, precision_fp32, precision_fp16, precision_int8, delegate_none, delegate_gpu, false};
         final Map<TfliteRunMode.Mode, boolean[]> candidates = new HashMap<TfliteRunMode.Mode, boolean[]>(){{
             put(TfliteRunMode.Mode.NONE_FP32,      new boolean[]{true, false, true, false, false, true, false, false});
             put(TfliteRunMode.Mode.NONE_FP16,      new boolean[]{true, false, false, true, false, true, false, false});

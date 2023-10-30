@@ -211,7 +211,7 @@
 
                         <TextView
                             android:id="@+id/textView6"
-                            android:layout_width="110dp"
+                            android:layout_width="59dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Delegate" />
@@ -222,7 +222,7 @@
                             android:layout_height="23dp"
                             android:layout_weight="1"
                             android:checked="true"
-                            android:text="None"
+                            android:text="CPU"
                             android:textAppearance="@style/TextAppearance.AppCompat.Body1"
                             android:textSize="16sp"
                             android:typeface="normal" />
@@ -238,15 +238,15 @@
                             android:textSize="16sp"
                             android:typeface="normal" />
 
-                        <RadioButton
-                            android:id="@+id/radioButton_delegateNNAPI"
-                            android:layout_width="wrap_content"
-                            android:layout_height="23dp"
-                            android:layout_weight="1"
-                            android:text="NNAPI"
-                            android:textAppearance="@style/TextAppearance.AppCompat.Body1"
-                            android:textSize="16sp"
-                            android:typeface="normal" />
+<!--                        <RadioButton-->
+<!--                            android:id="@+id/radioButton_delegateNNAPI"-->
+<!--                            android:layout_width="wrap_content"-->
+<!--                            android:layout_height="23dp"-->
+<!--                            android:layout_weight="1"-->
+<!--                            android:text="NNAPI"-->
+<!--                            android:textAppearance="@style/TextAppearance.AppCompat.Body1"-->
+<!--                            android:textSize="16sp"-->
+<!--                            android:typeface="normal" />-->
                     </RadioGroup>
 
                 </LinearLayout>

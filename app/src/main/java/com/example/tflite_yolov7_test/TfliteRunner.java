@@ -5,20 +5,17 @@ import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.RectF;
-import android.os.Build;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.util.Log;
 
-import org.tensorflow.lite.Interpreter;
-
-//import org.tensorflow.lite.gpu.CompatibilityList;
-//import org.tensorflow.lite.gpu.GpuDelegate;
-//import org.tensorflow.lite.gpu.GpuDelegateFactory;
+import org.tensorflow.lite.DelegateFactory;
+import org.tensorflow.lite.InterpreterApi;
+import org.tensorflow.lite.gpu.GpuDelegateFactory;
 import org.tensorflow.lite.nnapi.NnApiDelegate;
 
-import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
@@ -27,7 +24,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 import com.example.tflite_yolov7_test.TfliteRunMode.*;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
+import com.google.android.gms.tflite.client.TfLiteInitializationOptions;
+import com.google.android.gms.tflite.gpu.support.TfLiteGpu;
+import com.google.android.gms.tflite.java.TfLite;
 
 public class TfliteRunner {
     final int numBytesPerChannel_float = 4;
@@ -35,8 +39,9 @@ public class TfliteRunner {
     static {
         System.loadLibrary("native-lib");
     }
+    private Integer[] outputOrder;
     public native float[][] postprocess(float[][][][] out1, float[][][][] out2, float[][][][] out3, int inputSize, float conf_thresh, float iou_thresh);
-    private Interpreter tfliteInterpreter;
+    public InterpreterApi tfliteInterpreter = null;
     Mode runmode;
     int inputSize;
     class InferenceRawResult{
@@ -55,7 +60,7 @@ public class TfliteRunner {
     InferenceRawResult rawres;
     float conf_thresh;
     float iou_thresh;
-
+    public Task<Void> initializeTask;
     public TfliteRunner(Context context, String baseModelName, Mode runmode, int inputSize, float conf_thresh, float iou_thresh) throws Exception{
         this.runmode = runmode;
         this.rawres = new InferenceRawResult(inputSize);
@@ -74,59 +79,80 @@ public class TfliteRunner {
         long declaredLength = fileDescriptor.getDeclaredLength();
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
     }
-    public void loadModel(Context context, String baseModelName, Mode runmode, int inputSize, int num_threads) throws Exception{
-        Interpreter.Options options = (new Interpreter.Options());
-        NnApiDelegate nnApiDelegate = new NnApiDelegate();
-        options.addDelegate(nnApiDelegate);
-        options.setNumThreads(num_threads);
-        NnApiDelegate.Options nnapi_options = new NnApiDelegate.Options();
-        nnapi_options.setExecutionPreference(1);//sustain-spped
+    public void loadModel(Context context, String baseModelName, Mode runmode, int inputSize, int numThreads) throws Exception{
+        String precisionStr;
+        InterpreterApi.Options interpreterOption = new InterpreterApi.Options()
+            .setNumThreads(numThreads)
+            .setRuntime(InterpreterApi.Options.TfLiteRuntime.FROM_SYSTEM_ONLY);
+
+        this.initializeTask = TfLite.initialize(
+            context,
+            TfLiteInitializationOptions.builder()
+                .setEnableGpuDelegateSupport(true)
+                .build()
+        );
+        this.outputOrder = new Integer[]{1, 2, 0};
+
         switch (runmode){
             case NONE_FP32:
-            case NONE_INT8:
-                options.setUseXNNPACK(true);
+                precisionStr = "fp32";
+                interpreterOption.setUseXNNPACK(true);
                 break;
             case NONE_FP16:
-                options.setAllowFp16PrecisionForFp32(true);
+                precisionStr = "fp16";
+                interpreterOption.setUseXNNPACK(true);
+                break;
+            case NONE_INT8:
+                precisionStr = "int8";
+                interpreterOption.setUseXNNPACK(true);
                 break;
             case GPU_FP32:
+                precisionStr = "fp32";
+                interpreterOption.addDelegateFactory(new GpuDelegateFactory());
+                break;
             case GPU_FP16:
+                precisionStr = "fp16";
+                interpreterOption.addDelegateFactory(new GpuDelegateFactory());
+                break;
             case GPU_INT8:
-//                CompatibilityList compatList = new CompatibilityList();
-//                GpuDelegate.Options delegateOptions = compatList.getBestOptionsForThisDevice();
-//                GpuDelegate gpuDelegate = new GpuDelegate(delegateOptions);
-//                options.addDelegate(gpuDelegate);
+                precisionStr = "int8";
+                interpreterOption.addDelegateFactory(new GpuDelegateFactory());
                 break;
             case NNAPI_GPU_FP32:
-                nnapi_options.setAllowFp16(false);
-                options.addDelegate(new NnApiDelegate(nnapi_options));
+                precisionStr = "fp32";
+                interpreterOption.addDelegateFactory((DelegateFactory) new NnApiDelegate());
+                interpreterOption.setUseNNAPI(true);
                 break;
             case NNAPI_GPU_FP16:
-                nnapi_options.setAllowFp16(true);
-                options.addDelegate(new NnApiDelegate(nnapi_options));
+                precisionStr = "fp16";
+                interpreterOption.setUseNNAPI(true);
                 break;
             case NNAPI_DSP_INT8:
-                options.addDelegate(new NnApiDelegate(nnapi_options));
+                precisionStr = "int8";
+                interpreterOption.setUseNNAPI(true);
                 break;
             default:
-                throw new RuntimeException("Unknown runmode!");
+                throw new RuntimeException("Unknown run mode!");
         }
 
-        boolean quantized_mode = TfliteRunMode.isQuantizedMode(runmode);
-        String precision_str = quantized_mode ? "int8" : "fp32";
-//        String modelname = "yolov5s_" + precision_str + "_" + String.valueOf(inputSize) + ".tflite";
-        String modelname = baseModelName + "_" + precision_str + "_" + inputSize + ".tflite";
-        MappedByteBuffer tflite_model_buf = TfliteRunner.loadModelFile(context.getAssets(), modelname);
-        this.tfliteInterpreter = new Interpreter(tflite_model_buf, options);
+        String modelName = baseModelName + "_" + precisionStr + "_" + inputSize + ".tflite";
+        MappedByteBuffer tfliteModelBuf = TfliteRunner.loadModelFile(context.getAssets(), modelName);
+
+        InterpreterApi.Options finalInterpreterOption = interpreterOption;
+        this.initializeTask.addOnSuccessListener(a -> {
+            this.tfliteInterpreter = InterpreterApi.create(
+                tfliteModelBuf,
+                finalInterpreterOption
+            );
+        })
+        .addOnFailureListener(e -> Log.e("tfliteInterpreter", String.format("Cannot initialize interpreter: %s",e.getMessage())));
     }
     static public Bitmap getResizedImage(Bitmap bitmap, int inputSize) {
         Bitmap resized = Bitmap.createScaledBitmap(bitmap, inputSize, inputSize, true);
         return resized;
     }
     public void setInput(Bitmap resizedbitmap){
-        boolean quantized_mode = TfliteRunMode.isQuantizedMode(this.runmode);
-        int numBytesPerChannel = quantized_mode ? numBytesPerChannel_int : numBytesPerChannel_float;
-        ByteBuffer imgData = ByteBuffer.allocateDirect(1 * inputSize * inputSize * 3 * numBytesPerChannel);
+        ByteBuffer imgData = ByteBuffer.allocateDirect(inputSize * inputSize * 3 * 4);
 
         int[] intValues = new int[inputSize * inputSize];
         resizedbitmap.getPixels(intValues, 0, resizedbitmap.getWidth(), 0, 0, resizedbitmap.getWidth(), resizedbitmap.getHeight());
@@ -136,26 +162,19 @@ public class TfliteRunner {
         for (int i = 0; i < inputSize; ++i) {
             for (int j = 0; j < inputSize; ++j) {
                 int pixelValue = intValues[i * inputSize + j];
-                if (quantized_mode) {
-                    // Quantized model
-                    imgData.put((byte) ((pixelValue >> 16) & 0xFF));
-                    imgData.put((byte) ((pixelValue >> 8) & 0xFF));
-                    imgData.put((byte) (pixelValue & 0xFF));
-                } else { // Float model
-                    float r = (((pixelValue >> 16) & 0xFF)) / 255.0f;
-                    float g = (((pixelValue >> 8) & 0xFF)) / 255.0f;
-                    float b = ((pixelValue & 0xFF)) / 255.0f;
-                    imgData.putFloat(r);
-                    imgData.putFloat(g);
-                    imgData.putFloat(b);
-                }
+                float r = (((pixelValue >> 16) & 0xFF)) / 255.0f;
+                float g = (((pixelValue >> 8) & 0xFF)) / 255.0f;
+                float b = ((pixelValue & 0xFF)) / 255.0f;
+                imgData.putFloat(r);
+                imgData.putFloat(g);
+                imgData.putFloat(b);
             }
         }
         this.inputArray = new Object[]{imgData};
         this.outputMap = new HashMap<>();
-        outputMap.put(0, this.rawres.out1);
-        outputMap.put(1, this.rawres.out2);
-        outputMap.put(2, this.rawres.out3);
+        outputMap.put(this.outputOrder[0], this.rawres.out1); // float[1][inputSize/8][inputSize/8][3*85];
+        outputMap.put(this.outputOrder[1], this.rawres.out2); // float[1][inputSize/16][inputSize/16][3*85];
+        outputMap.put(this.outputOrder[2], this.rawres.out3); // float[1][inputSize/32][inputSize/32][3*85];
     }
     private int inference_elapsed;
     private int postprocess_elapsed;
@@ -171,12 +190,14 @@ public class TfliteRunner {
 
         //float[bbox_num][6]
         //                       (x1, y1, x2, y2, conf, class_idx)
-        float[][] bbox_arrs = postprocess(this.rawres.out1,
-                this.rawres.out2,
-                this.rawres.out3,
-                this.inputSize,
-                this.conf_thresh,
-                this.iou_thresh);
+        float[][] bbox_arrs = postprocess(
+            this.rawres.out1,
+            this.rawres.out2,
+            this.rawres.out3,
+            this.inputSize,
+            this.conf_thresh,
+            this.iou_thresh
+        );
         long end2 = System.currentTimeMillis();
         this.postprocess_elapsed = (int)(end2 - end);
         for(float[] bbox_arr: bbox_arrs){
@@ -216,8 +237,7 @@ public class TfliteRunner {
         /** Optional location within the source image for the location of the recognized object. */
         private RectF location;
 
-        public Recognition(
-                float[] bbox_array) {
+        public Recognition(float[] bbox_array) {
             float x1 = bbox_array[0];
             float y1 = bbox_array[1];
             float x2 = bbox_array[2];

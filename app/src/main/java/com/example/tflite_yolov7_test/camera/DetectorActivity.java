@@ -29,11 +29,16 @@ import com.example.tflite_yolov7_test.camera.tracker.MultiBoxTracker;
 import com.example.tflite_yolov7_test.customview.OverlayView;
 import com.example.tflite_yolov7_test.TfliteRunner;
 import com.example.tflite_yolov7_test.TfliteRunMode;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
+import com.google.android.gms.tflite.gpu.support.TfLiteGpu;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 public class DetectorActivity extends CameraActivity implements ImageReader.OnImageAvailableListener {
 
@@ -85,11 +90,11 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        SeekBar conf_seekBar = (SeekBar)findViewById(R.id.conf_seekBar2);
+        SeekBar conf_seekBar = findViewById(R.id.conf_seekBar2);
         conf_seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                TextView conf_textView = (TextView)findViewById(R.id.conf_TextView2);
+                TextView conf_textView = findViewById(R.id.conf_TextView2);
                 float thresh = (float)progress / 100.0f;
                 conf_textView.setText(String.format("Confidence Threshold: %.2f", thresh));
                 if (detector != null) detector.setConfThresh(thresh);
@@ -103,11 +108,11 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
         });
         conf_seekBar.setMax(100);
         conf_seekBar.setProgress(25);//0.25
-        SeekBar iou_seekBar = (SeekBar)findViewById(R.id.iou_seekBar2);
+        SeekBar iou_seekBar = findViewById(R.id.iou_seekBar2);
         iou_seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                TextView iou_textView = (TextView)findViewById(R.id.iou_TextView2);
+                TextView iou_textView = findViewById(R.id.iou_TextView2);
                 float thresh = (float)progress / 100.0f;
                 iou_textView.setText(String.format("IoU Threshold: %.2f", thresh));
                 if (detector != null) detector.setIoUThresh(thresh);
@@ -179,7 +184,7 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
         cropToFrameTransform = new Matrix();
         frameToCropTransform.invert(cropToFrameTransform);
 
-        trackingOverlay = (OverlayView) findViewById(R.id.tracking_overlay);
+        trackingOverlay = findViewById(R.id.tracking_overlay);
         trackingOverlay.addCallback(
                 new OverlayView.DrawCallback() {
                     @Override
@@ -208,49 +213,13 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
         final Canvas canvas = new Canvas(croppedBitmap);
         canvas.drawBitmap(rgbFrameBitmap, frameToCropTransform, null);
 
-        runInBackground(
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        final long nowTime = SystemClock.uptimeMillis();
-                        float fps = (float)1000 / (float)(nowTime - lastProcessingTimeMs);
-                        lastProcessingTimeMs = nowTime;
-
-
-                        //ImageUtils.saveBitmap(croppedBitmap);
-                        detector.setInput(croppedBitmap);
-                        final List<TfliteRunner.Recognition> results = detector.runInference();
-
-                        cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
-                        final Canvas canvas = new Canvas(cropCopyBitmap);
-                        final Paint paint = new Paint();
-                        paint.setColor(Color.RED);
-                        paint.setStyle(Paint.Style.STROKE);
-                        paint.setStrokeWidth(2.0f);
-
-                        for (final TfliteRunner.Recognition result : results) {
-                            final RectF location = result.getLocation();
-                            //canvas.drawRect(location, paint);
-                        }
-
-                        tracker.trackResults(results);
-                        trackingOverlay.postInvalidate();
-
-                        computingDetection = false;
-
-                        runOnUiThread(
-                                new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        TextView fpsTextView = (TextView)findViewById(R.id.textViewFPS);
-                                        String fpsText = String.format("FPS: %.2f", fps);
-                                        fpsTextView.setText(fpsText);
-                                        TextView latencyTextView = (TextView)findViewById(R.id.textViewLatency);
-                                        latencyTextView.setText(detector.getLastElapsedTimeLog());
-                                    }
-                                });
-                    }
-                });
+        runInBackground(() -> {
+            try {
+                run();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        });
 
         tracker.setFrameConfiguration(getDesiredPreviewFrameSize(), inputSize, sensorOrientation);
         findViewById(R.id.container).setLayoutParams(
@@ -264,4 +233,57 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
         );
     }
 
+    private void run() throws InterruptedException {
+        final long nowTime = SystemClock.uptimeMillis();
+        float fps = (float) 1000 / (float) (nowTime - lastProcessingTimeMs);
+        lastProcessingTimeMs = nowTime;
+
+        TextView modelNameTextView = findViewById(R.id.textView);
+        String modelName = modelNameTextView.getText().toString();
+
+        modelNameTextView.setText("The model is being prepared.");
+        try {
+            Tasks.await(detector.initializeTask);
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        modelNameTextView.setText(modelName);
+
+        //ImageUtils.saveBitmap(croppedBitmap);
+        detector.setInput(croppedBitmap);
+
+        List<TfliteRunner.Recognition> results = new ArrayList<>();
+        if (detector.tfliteInterpreter != null){
+            results = detector.runInference();
+        } else {
+            Log.w("DetectorActivity.run()", "detector.tfliteInterpreter == null");
+        }
+
+
+        cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
+        final Canvas canvas1 = new Canvas(cropCopyBitmap);
+        final Paint paint = new Paint();
+        paint.setColor(Color.RED);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(2.0f);
+
+        for (final TfliteRunner.Recognition result : results) {
+            final RectF location = result.getLocation();
+            //canvas.drawRect(location, paint);
+        }
+
+        tracker.trackResults(results);
+        trackingOverlay.postInvalidate();
+
+        computingDetection = false;
+
+        runOnUiThread(
+            () -> {
+                TextView fpsTextView = findViewById(R.id.textViewFPS);
+                String fpsText = String.format("FPS: %.2f", fps);
+                fpsTextView.setText(fpsText);
+                TextView latencyTextView = findViewById(R.id.textViewLatency);
+                latencyTextView.setText(detector.getLastElapsedTimeLog());
+            });
+    }
 }

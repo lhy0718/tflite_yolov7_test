@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    compileSdk 31
+    compileSdk 33
 
     defaultConfig {
         ndk {
@@ -11,7 +11,7 @@ android {
         }
         applicationId "com.example.tflite_yolov7_test"
         minSdkVersion 29
-        targetSdk 31
+        targetSdkVersion 33
         versionCode 1
         versionName "1.0"
 
@@ -55,18 +55,12 @@ dependencies {
     implementation 'androidx.navigation:navigation-ui:2.3.0'
 
 //    tflite support
-//    implementation 'org.tensorflow:tensorflow-lite:2.4.0'
-//    implementation 'org.tensorflow:tensorflow-lite:0.0.0-nightly-SNAPSHOT'
-//    implementation 'org.tensorflow:tensorflow-lite:0.0.0-nightly'
-//    implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:0.0.0-nightly'
-//    implementation 'org.tensorflow:tensorflow-lite-gpu:0.0.0-nightly-SNAPSHOT'
-//    implementation 'org.tensorflow:tensorflow-lite-support:0.0.0-nightly-SNAPSHOT'
-
-    implementation 'org.tensorflow:tensorflow-lite:2.12.0'
-//    implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:2.12.0'
-//    implementation 'org.tensorflow:tensorflow-lite-gpu:2.10.0'
-//    implementation 'org.tensorflow:tensorflow-lite-gpu-api:2.10.0'
-//    implementation 'org.tensorflow:tensorflow-lite-support:0.0.0-nightly-SNAPSHOT'
+    implementation 'org.tensorflow:tensorflow-lite:2.14.0'
+    implementation 'org.tensorflow:tensorflow-lite-gpu:2.14.0'
+    implementation 'org.tensorflow:tensorflow-lite-gpu-delegate-plugin:0.4.4'
+    implementation 'com.google.android.gms:play-services-tflite-java:16.1.0'
+    implementation 'com.google.android.gms:play-services-tflite-support:16.1.0'
+    implementation 'com.google.android.gms:play-services-tflite-gpu:16.2.0'
 
     testImplementation 'junit:junit:'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
