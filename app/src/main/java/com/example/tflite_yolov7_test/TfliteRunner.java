@@ -95,11 +95,11 @@ public class TfliteRunner {
 
         switch (runmode){
             case NONE_FP32:
-                precisionStr = "fp32";
+                precisionStr = "float32";
                 interpreterOption.setUseXNNPACK(true);
                 break;
             case NONE_FP16:
-                precisionStr = "fp16";
+                precisionStr = "float16";
                 interpreterOption.setUseXNNPACK(true);
                 break;
             case NONE_INT8:
@@ -107,11 +107,11 @@ public class TfliteRunner {
                 interpreterOption.setUseXNNPACK(true);
                 break;
             case GPU_FP32:
-                precisionStr = "fp32";
+                precisionStr = "float32";
                 interpreterOption.addDelegateFactory(new GpuDelegateFactory());
                 break;
             case GPU_FP16:
-                precisionStr = "fp16";
+                precisionStr = "float16";
                 interpreterOption.addDelegateFactory(new GpuDelegateFactory());
                 break;
             case GPU_INT8:
@@ -119,12 +119,12 @@ public class TfliteRunner {
                 interpreterOption.addDelegateFactory(new GpuDelegateFactory());
                 break;
             case NNAPI_GPU_FP32:
-                precisionStr = "fp32";
+                precisionStr = "float32";
                 interpreterOption.addDelegateFactory((DelegateFactory) new NnApiDelegate());
                 interpreterOption.setUseNNAPI(true);
                 break;
             case NNAPI_GPU_FP16:
-                precisionStr = "fp16";
+                precisionStr = "float16";
                 interpreterOption.setUseNNAPI(true);
                 break;
             case NNAPI_DSP_INT8:

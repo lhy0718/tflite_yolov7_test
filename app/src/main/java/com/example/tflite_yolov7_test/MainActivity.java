@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
     final int REQUEST_OPEN_DIRECTORY = 9999;
     //permission
     private int inputSize = -1;
-    private String baseModelName = "yolov7-tiny"; // must be lowercase
+    private String baseModelName = "yolov9t"; // must be lowercase
     private File[] process_files = null;
     private final int REQUEST_PERMISSION = 1000;
     private final String[] PERMISSIONS = {
